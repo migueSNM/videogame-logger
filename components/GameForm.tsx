@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea"
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
+import { DatePicker } from "@/components/ui/date-picker"
 import { Game, GameStatus } from "@/lib/supabase"
 
 const CONSOLES = [
@@ -166,23 +167,21 @@ export default function GameForm({ initial, onSubmit, onCancel }: GameFormProps)
 
         {/* Start Date */}
         <div className="space-y-1.5">
-          <Label htmlFor="start">Start Date</Label>
-          <Input
-            id="start"
-            type="date"
+          <Label>Start Date</Label>
+          <DatePicker
             value={form.start_date}
-            onChange={(e) => set("start_date", e.target.value)}
+            onChange={(v) => set("start_date", v)}
+            placeholder="Pick start date"
           />
         </div>
 
         {/* End Date */}
         <div className="space-y-1.5">
-          <Label htmlFor="end">End Date</Label>
-          <Input
-            id="end"
-            type="date"
+          <Label>End Date</Label>
+          <DatePicker
             value={form.end_date}
-            onChange={(e) => set("end_date", e.target.value)}
+            onChange={(v) => set("end_date", v)}
+            placeholder="Pick end date"
           />
         </div>
 
