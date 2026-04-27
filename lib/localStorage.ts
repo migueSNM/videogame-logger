@@ -5,6 +5,9 @@ const USER_KEY = "videogame_logger_user"
 
 export type LocalUser = { email: string; id: string }
 
+// DEMO MODE: fixed demo user — remove when re-enabling auth
+export const DEMO_USER: LocalUser = { email: "demo@videogame-logger.demo", id: "demo" }
+
 export function getLocalUser(): LocalUser | null {
   if (typeof window === "undefined") return null
   const raw = localStorage.getItem(USER_KEY)
