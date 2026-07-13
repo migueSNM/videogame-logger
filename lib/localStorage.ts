@@ -1,25 +1,53 @@
-import { Game, GameStatus } from "./supabase"
+import { Game } from "./supabase/types"
+import { SEED_GAMES } from "./seedGames"
 
 const GAMES_KEY = "videogame_logger_games"
 const USER_KEY = "videogame_logger_user"
 
-export type LocalUser = { email: string; id: string }
+export type LocalUser = { email: string; id: string; isTrial?: boolean }
 
-// DEMO MODE: fixed demo user — remove when re-enabling auth
-export const DEMO_USER: LocalUser = { email: "demo@videogame-logger.demo", id: "demo" }
+export const TRIAL_GAME_LIMIT = 10
+
+export const TRIAL_USER: LocalUser = { email: "trial@videogame-logger.demo", id: "trial", isTrial: true }
+
+const LOCAL_USER_EVENT = "videogame-logger:local-user-change"
+
+// Cache keyed on the raw string so repeated calls with unchanged storage
+// return the same object reference — required for useSyncExternalStore,
+// which treats a new reference on every call as a changed snapshot and
+// re-renders in a loop (JSON.parse never returns the same object twice).
+let cachedUserRaw: string | null = null
+let cachedUser: LocalUser | null = null
 
 export function getLocalUser(): LocalUser | null {
   if (typeof window === "undefined") return null
   const raw = localStorage.getItem(USER_KEY)
-  return raw ? JSON.parse(raw) : null
+  if (raw !== cachedUserRaw) {
+    cachedUserRaw = raw
+    cachedUser = raw ? JSON.parse(raw) : null
+  }
+  return cachedUser
 }
 
 export function setLocalUser(user: LocalUser): void {
   localStorage.setItem(USER_KEY, JSON.stringify(user))
+  window.dispatchEvent(new Event(LOCAL_USER_EVENT))
 }
 
 export function clearLocalUser(): void {
   localStorage.removeItem(USER_KEY)
+  window.dispatchEvent(new Event(LOCAL_USER_EVENT))
+}
+
+// For useSyncExternalStore — the native "storage" event only fires in other
+// tabs, so same-tab writes need this custom event to notify subscribers.
+export function subscribeLocalUser(callback: () => void): () => void {
+  window.addEventListener("storage", callback)
+  window.addEventListener(LOCAL_USER_EVENT, callback)
+  return () => {
+    window.removeEventListener("storage", callback)
+    window.removeEventListener(LOCAL_USER_EVENT, callback)
+  }
 }
 
 export function getLocalGames(): Game[] {
@@ -58,71 +86,8 @@ export function deleteLocalGame(id: string): void {
 }
 
 export function seedDemoGames(userId: string): void {
-  const existing = getLocalGames()
+  const existing = getLocalGames().filter((g) => g.user_id === userId)
   if (existing.length > 0) return
 
-  const demos: Omit<Game, "id" | "created_at">[] = [
-    {
-      user_id: userId,
-      title: "The Legend of Zelda: Breath of the Wild",
-      console: "Nintendo Switch",
-      status: "completed",
-      days_played: 45,
-      start_date: "2023-01-10",
-      end_date: "2023-02-24",
-      rating: 10,
-      notes: "Masterpiece. Explored every corner of Hyrule.",
-      cover_url: null,
-    },
-    {
-      user_id: userId,
-      title: "God of War Ragnarök",
-      console: "PlayStation 5",
-      status: "completed",
-      days_played: 30,
-      start_date: "2023-03-01",
-      end_date: "2023-03-31",
-      rating: 9,
-      notes: "Epic story, incredible graphics.",
-      cover_url: null,
-    },
-    {
-      user_id: userId,
-      title: "Elden Ring",
-      console: "PC",
-      status: "playing",
-      days_played: 60,
-      start_date: "2023-04-15",
-      end_date: null,
-      rating: null,
-      notes: "Still exploring the Lands Between.",
-      cover_url: null,
-    },
-    {
-      user_id: userId,
-      title: "Hollow Knight",
-      console: "Nintendo Switch",
-      status: "dropped",
-      days_played: 10,
-      start_date: "2022-12-01",
-      end_date: "2022-12-11",
-      rating: 7,
-      notes: "Great game but got too busy.",
-      cover_url: null,
-    },
-    {
-      user_id: userId,
-      title: "Cyberpunk 2077",
-      console: "PC",
-      status: "backlog",
-      days_played: null,
-      start_date: null,
-      end_date: null,
-      rating: null,
-      notes: "Heard the post-patch version is amazing.",
-      cover_url: null,
-    },
-  ]
-
-  demos.forEach((g) => addLocalGame(g))
+  SEED_GAMES.forEach((g) => addLocalGame({ ...g, user_id: userId }))
 }

@@ -1,41 +1,75 @@
 "use client"
 
-import { useState, useEffect } from "react"
-// DEMO MODE: LoginPage kept for when auth is re-enabled
-// import LoginPage from "@/components/LoginPage"
+import { useState, useEffect, useSyncExternalStore } from "react"
+import type { User } from "@supabase/supabase-js"
+import LandingPage from "@/components/LandingPage"
 import Dashboard from "@/components/Dashboard"
-import { getLocalUser, setLocalUser, LocalUser, DEMO_USER } from "@/lib/localStorage"
+import { getLocalUser, setLocalUser, clearLocalUser, subscribeLocalUser, TRIAL_USER } from "@/lib/localStorage"
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/client"
+
+function getServerLocalUser() {
+  return null
+}
+
+function useTrialUser() {
+  return useSyncExternalStore(subscribeLocalUser, getLocalUser, getServerLocalUser)
+}
 
 export default function Home() {
-  const [user, setUser] = useState<LocalUser | null>(null)
-  const [mounted, setMounted] = useState(false)
+  const trialUser = useTrialUser()
+  // Supabase config is a static env check, not reactive state — if it's
+  // missing there's nothing to fetch, so skip straight past the loading state.
+  const [supabaseUser, setSupabaseUser] = useState<User | null | undefined>(
+    () => (isSupabaseConfigured() ? undefined : null)
+  )
 
   useEffect(() => {
-    // DEMO MODE: auto-init demo user, skip login
-    let u = getLocalUser()
-    if (!u) {
-      setLocalUser(DEMO_USER)
-      u = DEMO_USER
-    }
-    setUser(u)
-    setMounted(true)
-  }, [])
+    if (trialUser || !isSupabaseConfigured()) return
 
-  if (!mounted) return null
+    const supabase = createClient()
 
-  // DEMO MODE: login gate disabled — re-enable when auth is restored
-  // if (!user) {
-  //   return <LoginPage onLogin={() => setUser(getLocalUser())} />
-  // }
+    supabase.auth.getUser().then(({ data }) => {
+      setSupabaseUser(data.user ?? null)
+    })
+
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, authSession) => {
+      setSupabaseUser(authSession?.user ?? null)
+    })
+
+    return () => sub.subscription.unsubscribe()
+  }, [trialUser])
+
+  if (trialUser) {
+    return (
+      <Dashboard
+        userId={trialUser.id}
+        userEmail={trialUser.email}
+        isTrial
+        source="local"
+        onLogout={clearLocalUser}
+      />
+    )
+  }
+
+  if (supabaseUser === undefined) return null
+
+  if (!supabaseUser) {
+    return (
+      <LandingPage
+        onTryFree={() => setLocalUser(TRIAL_USER)}
+      />
+    )
+  }
 
   return (
     <Dashboard
-      userId={user!.id}
-      userEmail={user!.email}
-      onLogout={() => {
-        // DEMO MODE: re-init demo user instead of going to login screen
-        setLocalUser(DEMO_USER)
-        setUser(DEMO_USER)
+      userId={supabaseUser.id}
+      userEmail={supabaseUser.email ?? ""}
+      isTrial={false}
+      source="supabase"
+      onLogout={async () => {
+        await createClient().auth.signOut()
+        setSupabaseUser(null)
       }}
     />
   )

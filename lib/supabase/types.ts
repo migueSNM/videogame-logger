@@ -1,10 +1,3 @@
-import { createClient } from "@supabase/supabase-js"
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
-
 export type Database = {
   public: {
     Tables: {
@@ -12,8 +5,11 @@ export type Database = {
         Row: Game
         Insert: Omit<Game, "id" | "created_at">
         Update: Partial<Omit<Game, "id" | "created_at">>
+        Relationships: []
       }
     }
+    Views: Record<string, never>
+    Functions: Record<string, never>
   }
 }
 

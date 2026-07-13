@@ -9,7 +9,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
 import { DatePicker } from "@/components/ui/date-picker"
-import { Game, GameStatus } from "@/lib/supabase"
+import { Game, GameStatus } from "@/lib/supabase/types"
 
 const CONSOLES = [
   "PlayStation 5", "PlayStation 4", "PlayStation 3",

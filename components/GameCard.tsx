@@ -11,10 +11,10 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Game, GameStatus } from "@/lib/supabase"
+import { Game, GameStatus } from "@/lib/supabase/types"
 import GameForm from "./GameForm"
 import {
-  Gamepad2, Calendar, Clock, Star, Pencil, Trash2, StickyNote,
+  Calendar, Clock, Star, Pencil, Trash2, StickyNote,
 } from "lucide-react"
 
 const STATUS_CONFIG: Record<GameStatus, { label: string; variant: "success" | "info" | "warning" | "secondary" | "outline" }> = {

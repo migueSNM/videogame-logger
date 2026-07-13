@@ -10,14 +10,13 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
 import GameCard from "./GameCard"
 import GameForm from "./GameForm"
-import { Game, GameStatus } from "@/lib/supabase"
+import { Game, GameStatus } from "@/lib/supabase/types"
 import { useGames } from "@/lib/useGames"
-import { clearLocalUser } from "@/lib/localStorage"
+import { TRIAL_GAME_LIMIT } from "@/lib/localStorage"
 import {
-  Gamepad2, Plus, Search, LogOut, Trophy, Clock, Monitor, TrendingUp,
+  Gamepad2, Plus, Search, LogOut, Trophy, Clock, Monitor,
 } from "lucide-react"
 
 const STATUS_FILTERS: { value: GameStatus | "all"; label: string }[] = [
@@ -32,15 +31,19 @@ const STATUS_FILTERS: { value: GameStatus | "all"; label: string }[] = [
 interface DashboardProps {
   userId: string
   userEmail: string
+  isTrial?: boolean
+  source: "local" | "supabase"
   onLogout: () => void
 }
 
-export default function Dashboard({ userId, userEmail, onLogout }: DashboardProps) {
-  const { games, loading, addGame, updateGame, removeGame } = useGames(userId)
+export default function Dashboard({ userId, userEmail, isTrial = false, source, onLogout }: DashboardProps) {
+  const { games, loading, addGame, updateGame, removeGame } = useGames(userId, source)
   const [search, setSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<GameStatus | "all">("all")
   const [consoleFilter, setConsoleFilter] = useState("all")
   const [addOpen, setAddOpen] = useState(false)
+
+  const atLimit = isTrial && games.length >= TRIAL_GAME_LIMIT
 
   const consoles = useMemo(() => {
     const set = new Set(games.map((g) => g.console))
@@ -66,13 +69,9 @@ export default function Dashboard({ userId, userEmail, onLogout }: DashboardProp
   }, [games])
 
   function handleAdd(data: Omit<Game, "id" | "created_at" | "user_id">) {
+    if (atLimit) return
     addGame(data)
     setAddOpen(false)
-  }
-
-  function handleLogout() {
-    clearLocalUser()
-    onLogout()
   }
 
   return (
@@ -83,10 +82,11 @@ export default function Dashboard({ userId, userEmail, onLogout }: DashboardProp
           <div className="flex items-center gap-2.5">
             <Gamepad2 className="h-5 w-5 text-primary" />
             <span className="font-semibold text-sm">Videogame Logger</span>
+            {isTrial && <Badge variant="outline">Trial</Badge>}
           </div>
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground hidden sm:block">{userEmail}</span>
-            <Button variant="ghost" size="sm" onClick={handleLogout} className="gap-1.5">
+            <Button variant="ghost" size="sm" onClick={onLogout} className="gap-1.5">
               <LogOut className="h-4 w-4" />
               <span className="hidden sm:inline">Sign out</span>
             </Button>
@@ -136,9 +136,13 @@ export default function Dashboard({ userId, userEmail, onLogout }: DashboardProp
           </Select>
           <Dialog open={addOpen} onOpenChange={setAddOpen}>
             <DialogTrigger asChild>
-              <Button className="gap-2 shrink-0">
+              <Button
+                className="gap-2 shrink-0"
+                disabled={atLimit}
+                title={atLimit ? "Trial limit reached — sign in for unlimited games" : undefined}
+              >
                 <Plus className="h-4 w-4" />
-                Add Game
+                {atLimit ? "Trial limit reached" : "Add Game"}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -155,6 +159,11 @@ export default function Dashboard({ userId, userEmail, onLogout }: DashboardProp
           <span className="text-sm text-muted-foreground">
             {filtered.length} {filtered.length === 1 ? "game" : "games"}
           </span>
+          {isTrial && (
+            <span className="text-xs text-muted-foreground">
+              · {games.length}/{TRIAL_GAME_LIMIT} games (trial)
+            </span>
+          )}
           {(statusFilter !== "all" || consoleFilter !== "all" || search) && (
             <Button
               variant="ghost"
