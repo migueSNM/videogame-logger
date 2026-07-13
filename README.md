@@ -2,7 +2,7 @@
 
 Track your gaming journey — log every game you play, which console you played it on, how long it took, and how you felt about it.
 
-**Live demo → coming soon on Vercel**
+**Live demo → [https://videogame-logger.vercel.app](https://videogame-logger.vercel.app)**
 
 ---
 
